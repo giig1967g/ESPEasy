@@ -774,6 +774,9 @@ uint8_t Plugin_019_ReadAllPins(uint8_t address)
 //********************************************************************************
 boolean Plugin_019_Write(byte Par1, byte Par2)
 {
+  String log = String(F("PCF: Inside Plugin Write. Par1=")) + String(Par1) + String(F(";Par2="))+ String(Par2);
+  addLog(LOG_LEVEL_INFO, log);
+
   uint8_t unit = (Par1 - 1) / 8;
   uint8_t port = Par1 - (unit * 8);
   uint8_t address = 0x20 + unit;

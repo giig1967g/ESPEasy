@@ -168,7 +168,7 @@ boolean Plugin_009(byte function, struct EventStruct *event, String& string)
     case PLUGIN_INIT:
       {
         // Turn on Pullup resistor
-        Plugin_009_Config(CONFIG_PORT, 1);
+        Plugin_009_Config(CONFIG_PORT, PIN_MODE_INPUT_PULLUP);
 
         //apply INIT only if PIN is in range. Do not start INIT if pin not set in the device page.
         if (CONFIG_PORT >= 0)
@@ -535,11 +535,10 @@ boolean Plugin_009(byte function, struct EventStruct *event, String& string)
               tempStatus.state=-1;
               log = String(F("MCP  : GPIO ")) + String(event->Par1) + String(F(" is offline (-1). Cannot set value."));
             } else if (event->Par2 == 2) { //INPUT
-          	  // PCF8574 specific: only can read 0/low state, so we must send 1
-          	  //setPinState(PLUGIN_ID_019, event->Par1, PIN_MODE_INPUT, 1);
               tempStatus.mode=PIN_MODE_INPUT_PULLUP;
               tempStatus.state = currentState;
-          	  Plugin_009_Write(event->Par1,1);
+              Plugin_009_Config(event->Par1, PIN_MODE_INPUT_PULLUP);
+              //Plugin_009_Write(event->Par1,1); @giig1967g THIS WAS WRONG!
           	  log = String(F("MCP  : GPIO INPUT ")) + String(event->Par1) + String(F(" Set to 1"));
             } else { // OUTPUT
           	  //setPinState(PLUGIN_ID_019, event->Par1, PIN_MODE_OUTPUT, event->Par2);
@@ -764,30 +763,15 @@ boolean Plugin_009_Write(byte Par1, byte Par2)
   byte unit = (Par1 - 1) / 16;
   byte port = Par1 - (unit * 16);
   uint8_t address = 0x20 + unit;
-  byte IOBankConfigReg = 0;
   byte IOBankValueReg = 0x12;
   if (port > 8)
   {
     port = port - 8;
-    IOBankConfigReg++;
     IOBankValueReg++;
   }
-  // turn this port into output, first read current config
-  Wire.beginTransmission(address);
-  Wire.write(IOBankConfigReg); // IO config register
-  Wire.endTransmission();
-  Wire.requestFrom(address, (uint8_t)0x1);
-  if (Wire.available())
-  {
-    portvalue = Wire.read();
-    portvalue &= ~(1 << (port - 1)); // change pin from (default) input to output
 
-    // write new IO config
-    Wire.beginTransmission(address);
-    Wire.write(IOBankConfigReg); // IO config register
-    Wire.write(portvalue);
-    Wire.endTransmission();
-  }
+  Plugin_009_Config(Byte Par1, PIN_MODE_OUTPUT);
+
   // get the current pin status
   Wire.beginTransmission(address);
   Wire.write(IOBankValueReg); // IO data register
@@ -822,30 +806,57 @@ void Plugin_009_Config(byte Par1, byte Par2)
   byte unit = (Par1 - 1) / 16;
   byte port = Par1 - (unit * 16);
   uint8_t address = 0x20 + unit;
-  byte IOBankConfigReg = 0xC;
+  byte IOBankConfigReg = 0xC; //GPPUx register
+  byte IOBankIOReg = 0; //IODIRx register
+
   if (port > 8)
   {
     port = port - 8;
     IOBankConfigReg++;
+    IOBankIOReg++;
   }
-  // turn this port pullup on
+
+  //Set pin IO DIRECTION register
   Wire.beginTransmission(address);
-  Wire.write(IOBankConfigReg);
+  Wire.write(IOBankIOReg); // IODIRx config register (input=1 or output=0)
   Wire.endTransmission();
   Wire.requestFrom(address, (uint8_t)0x1);
   if (Wire.available())
   {
     portvalue = Wire.read();
-    if (Par2 == 1)
-      portvalue |= (1 << (port - 1));
+    if (Par2 == PIN_MODE_OUTPUT)
+      portvalue &= ~(1 << (port - 1)); //Set to output (=0)
     else
-      portvalue &= ~(1 << (port - 1));
+      portvalue |= (1 << (port - 1));  //Set to input (=1)
 
     // write new IO config
     Wire.beginTransmission(address);
-    Wire.write(IOBankConfigReg); // IO config register
+    Wire.write(IOBankIOReg); // IO config register
     Wire.write(portvalue);
     Wire.endTransmission();
   }
+
+  if (Par2 == PIN_MODE_INPUT || Par2 == PIN_MODE_INPUT_PULLUP) {
+    //Set PULLUP register
+    Wire.beginTransmission(address);
+    Wire.write(IOBankConfigReg);
+    Wire.endTransmission();
+    Wire.requestFrom(address, (uint8_t)0x1);
+    if (Wire.available())
+    {
+      portvalue = Wire.read();
+      if (Par2 == PIN_MODE_INPUT_PULLUP)
+        portvalue |= (1 << (port - 1)); //set to 1
+      else
+        portvalue &= ~(1 << (port - 1)); //Set to 0
+
+      // write new IO PULLUP config
+      Wire.beginTransmission(address);
+      Wire.write(IOBankConfigReg); // GPPUx config register (pullup=1)
+      Wire.write(portvalue);
+      Wire.endTransmission();
+    }
+  }
+
 }
 #endif // USES_P009

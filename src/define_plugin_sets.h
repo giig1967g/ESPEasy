@@ -104,7 +104,7 @@ To create/register a plugin, you have to :
     #ifndef WEBSERVER_WIFI_SCANNER
         #define WEBSERVER_WIFI_SCANNER
     #endif
-#endif 
+#endif
 
 #ifndef USE_CUSTOM_H
     #ifndef USES_SSDP
@@ -770,6 +770,7 @@ To create/register a plugin, you have to :
 
     #define USES_P063   // TTP229_KeyPad
     #define USES_P073   // 7DG
+    #define USES_P078   // Eastron Modbus Energy meters
     #define USES_P079   // Wemos Motoshield
 #endif
 
@@ -848,7 +849,7 @@ To create/register a plugin, you have to :
     #define USES_P086   // Receiving values according Homie convention. Works together with C014 Homie controller
     //#define USES_P087   // Serial Proxy
     #define USES_P089   // Ping
-    #define USES_P090   // CCS811 TVOC/eCO2 Sensor 
+    #define USES_P090   // CCS811 TVOC/eCO2 Sensor
     #define USES_P091	// SerSwitch
     #define USES_P092   // DL-Bus
     #define USES_P093   // Mitsubishi Heat Pump
